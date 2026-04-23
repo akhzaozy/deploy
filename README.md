@@ -273,7 +273,7 @@ Buka GitHub Actions → tab **Actions** → klik deploy terbaru → **Job Summar
 
 ## 📞 Bantuan
 
-Jika masih ada masalah, hubungi asisten praktikum atau lihat log lengkap:
+Jika masih ada masalah, hubungi Dosen terkati atau lihat log lengkap:
 ```bash
 cat /var/log/autodeploy/nama-repo.log
 ```
