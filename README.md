@@ -1,4 +1,4 @@
-# 🚀 AutoDeploy v2.3 — Panduan Instalasi
+# 🚀 AutoDeploy Sistem Informasi Institut Teknologi Kalimantan — Panduan Lengkap
 
 > Platform auto-hosting untuk mahasiswa ITK. Push ke GitHub → otomatis live di server.
 
@@ -10,11 +10,13 @@
 2. [File yang Kamu Butuhkan](#-file-yang-kamu-butuhkan)
 3. [Setup GitHub Repository](#-setup-github-repository)
 4. [Cara Deploy Pertama Kali](#-cara-deploy-pertama-kali)
-5. [Cara Login SSH dari Windows](#-cara-login-ssh-dari-windows)
-6. [Setup Laravel (setelah deploy pertama)](#-setup-laravel-setelah-deploy-pertama)
-7. [Cara Update Kode](#-cara-update-kode)
-8. [Perintah Berguna di Server](#-perintah-berguna-di-server)
-9. [Troubleshooting](#-troubleshooting)
+5. [Install cloudflared](#-langkah-1--install-cloudflared-sekali-saja)
+6. [Login SSH ke Server](#-langkah-2--login-ssh-ke-server)
+7. [Masuk ke Direktori Project](#-langkah-3--masuk-ke-direktori-project)
+8. [Setup Laravel](#-langkah-4--setup-laravel)
+9. [Cara Update Kode](#-cara-update-kode)
+10. [Perintah Berguna](#-perintah-berguna-di-server)
+11. [Troubleshooting](#-troubleshooting)
 
 ---
 
@@ -25,8 +27,9 @@ Kamu push kode ke GitHub
         │
         ▼
 GitHub Actions berjalan otomatis
-  • Deteksi framework (Laravel / PHP Native)
-  • Buat ZIP dari kode kamu
+  • Deteksi framework (Laravel / PHP Composer / PHP Native)
+  • Deteksi apakah ada package.json (npm)
+  • Buat ZIP dari kode kamu (dotfiles disertakan, .env dikecualikan)
   • Kirim ke server via HTTPS
         │
         ▼
@@ -40,10 +43,8 @@ Server AutoDeploy menerima ZIP
 Web kamu live di:
   https://<nama-repo>.akhzafachrozy.my.id
 
-Kamu bisa SSH masuk untuk:
-  • Install composer / npm
-  • Setup file .env
-  • Jalankan migrasi database
+Di GitHub Actions → tab Actions → job terbaru → Job Summary
+kamu akan menemukan SEMUA informasi + panduan langkah selanjutnya.
 ```
 
 ---
@@ -53,8 +54,9 @@ Kamu bisa SSH masuk untuk:
 | File | Fungsi |
 |------|--------|
 | `deploy.yml` | Diletakkan di `.github/workflows/` pada repo kamu |
-| `cloudflaredclient.bat` | Install cloudflared di Windows (sekali saja) |
-| `ssh.bat` | Login SSH ke server dari Windows |
+| `cloudflaredclient.bat` | Install cloudflared di **Windows** (sekali saja) |
+| `ssh.bat` | Login SSH di **Windows** |
+| — | macOS/Linux: gunakan terminal biasa (lihat panduan di bawah) |
 
 ---
 
@@ -85,8 +87,6 @@ git commit -m "first deploy"
 git push origin main
 ```
 
-Buka tab **Actions** di GitHub untuk melihat progress deploy.
-
 ---
 
 ## 🚀 Cara Deploy Pertama Kali
@@ -95,92 +95,160 @@ Buka tab **Actions** di GitHub untuk melihat progress deploy.
 2. Buka **GitHub → tab Actions → workflow terbaru**.
 3. Tunggu hingga semua job selesai (centang hijau ✅).
 4. Klik job **Package & Deploy** → lihat **Job Summary**.
-5. Di summary kamu akan melihat:
 
-```
-Domain   : https://nama-repo.akhzafachrozy.my.id
-SSH User : nama-repo
-SSH Pass : nama-repo<3xxx
-SSH Cmd  : ssh nama-repo@IP-SERVER
-```
+Di Job Summary kamu akan menemukan:
+- 🌐 Domain web kamu
+- 🔑 Username & password SSH
+- 📋 **Semua langkah selanjutnya** yang perlu kamu ikuti
 
-Simpan informasi ini, kamu butuhkan untuk login SSH.
+> **Selalu baca Job Summary setelah deploy** — semua panduan ada di sana, disesuaikan otomatis dengan repo kamu.
 
 ---
 
-## 💻 Cara Login SSH dari Windows
+## 💻 Langkah 1 — Install cloudflared (sekali saja)
 
-SSH ke server menggunakan **Cloudflare Tunnel** — kamu tidak perlu tahu IP server.
+SSH ke server menggunakan **Cloudflare Tunnel**. Kamu perlu install `cloudflared` terlebih dahulu.
 
-### Langkah 1 — Install cloudflared (sekali saja)
+### 🪟 Windows
 
-1. **Klik kanan** file `cloudflaredclient.bat` → **Run as administrator**
-2. Tunggu proses download dan instalasi selesai
-3. Tutup command prompt setelah muncul "BERHASIL!"
+1. Download file `cloudflaredclient.bat` dari github
+2. **Klik kanan** → **Run as administrator**
+3. Tunggu hingga muncul **"BERHASIL!"**
+4. Tutup command prompt
 
-> ⚠️ Jika muncul "Windows protected your PC", klik **More info** → **Run anyway**
+> ⚠️ Jika muncul *"Windows protected your PC"*, klik **More info** → **Run anyway**
 
-### Langkah 2 — Login SSH
-
-1. **Klik kanan** file `ssh.bat` → **Run as administrator**
-2. Masukkan **username SSH** dari output GitHub Actions
-3. Tekan Enter, lalu masukkan **password SSH** saat diminta
-4. Kamu sekarang berada di dalam server! 🎉
-
-```
-Contoh:
-Username SSH: nama-repo
-Password SSH: nama-repo<3123
-```
-
----
-
-## 🔧 Setup Laravel (setelah deploy pertama)
-
-Setelah berhasil SSH masuk, jalankan langkah-langkah berikut:
+### 🍎 macOS
 
 ```bash
-# 1. Masuk ke folder project
-cd /www/wwwroot/hosting/nama-repo
+brew install cloudflare
+```
 
-# 2. Install dependencies Composer
-/www/server/php/83/bin/php /usr/local/bin/composer install --no-dev --optimize-autoloader
+> Belum punya Homebrew? Install dulu di [brew.sh](https://brew.sh)
 
-# 3. Salin dan edit file .env
+Verifikasi instalasi:
+
+```bash
+cloudflared --version
+```
+
+---
+
+## 🔑 Langkah 2 — Login SSH ke Server
+
+Ambil **username dan password SSH** dari **Job Summary** di GitHub Actions.
+
+### 🪟 Windows
+
+1. Download file `ssh.bat` dari github
+2. **Klik kanan** → **Run as administrator**
+3. Masukkan **username SSH** saat diminta → Enter
+4. Masukkan **password SSH** saat diminta → Enter
+
+### 🍎 macOS / 🐧 Linux
+
+Jalankan perintah SSH yang ada di Job Summary, contohnya:
+
+1. Download file `ssh.sh` dari github
+2. chmod +x ssh.sh
+3. untuk membuka ketik ./ssh.sh
+4. Masukkan **username SSH** saat diminta → Enter
+5. Masukkan **password SSH** saat diminta → Enter
+
+Jika diminta konfirmasi (pertama kali):
+```
+Are you sure you want to continue connecting? (yes/no)
+```
+Ketik `yes` lalu Enter.
+
+> 💡 Password SSH selalu bisa dilihat kembali di GitHub Actions → tab Actions → klik deploy terbaru → **Job Summary**.
+
+---
+
+## 📂 Langkah 3 — Masuk ke Direktori Project
+
+Setelah berhasil masuk SSH, sudah otomatis masuk ke dalam project direktori:
+
+---
+
+## ⚙️ Langkah 4 — Setup Laravel
+
+> Langkah ini hanya perlu dilakukan **sekali** setelah deploy pertama. Update kode selanjutnya cukup push ke GitHub.
+
+### 4a. Install dependencies Composer
+
+```bash
+composer install --no-dev --optimize-autoloader
+```
+
+### 4b. Salin & edit file `.env`
+
+```bash
 cp .env.example .env
 nano .env
 ```
 
-Isi `.env` minimal seperti ini:
+Isi konfigurasi berikut (sesuaikan bagian lain jika perlu):
+
 ```env
-APP_KEY=              # diisi langkah 4
+APP_KEY=               # akan diisi otomatis di langkah 4d
 APP_URL=https://nama-repo.akhzafachrozy.my.id
 APP_ENV=production
 APP_DEBUG=false
-DB_CONNECTION=sqlite  # atau mysql jika pakai MySQL
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=nama database
+DB_USERNAME=deploysiitk
+DB_PASSWORD=deploysiitk2026
 ```
 
+Simpan file: tekan **Ctrl+X** → ketik **Y** → **Enter**
+
+### 4c. Generate APP_KEY
+
 ```bash
-# 4. Generate APP_KEY
-/www/server/php/83/bin/php artisan key:generate
+php artisan key:generate
+```
 
-# 5. Jalankan migrasi database
-/www/server/php/83/bin/php artisan migrate --force
+### 4d. Jalankan migrasi database
 
-# 6. Buat symlink storage
-/www/server/php/83/bin/php artisan storage:link
+```bash
+php artisan migrate --force
+```
 
-# 7. Fix permission (wajib!)
-sudo fix-perm-nama-repo
+### 4e. Buat symlink storage
 
-# 8. Aktifkan web
+```bash
+php artisan storage:link
+```
+### 4f. Install dependencies NPM & build aset (jika ada `package.json`)
+
+```bash
+npm install
+npm run build
+```
+
+### 4g. Restart service
+
+```bash
 sudo systemctl restart autodeploy-nama-repo.service
+```
 
-# 9. Verifikasi
+### 4h. Verifikasi service berjalan
+
+```bash
 sudo systemctl status autodeploy-nama-repo.service
 ```
 
-Web kamu sekarang live di `https://nama-repo.akhzafachrozy.my.id` 🎉
+Output yang berarti sukses: `● autodeploy-nama-repo.service ... active (running)`
+
+---
+
+## 🎉 Web Kamu Sekarang Live!
+
+Buka di browser: `https://nama-repo.akhzafachrozy.my.id`
 
 ---
 
@@ -198,12 +266,13 @@ Yang **aman** saat update (tidak ditimpa):
 - `.env` — konfigurasi kamu tetap aman
 - `storage/` — file upload user tetap ada
 - `vendor/` — dependensi tetap ada
-- `database/database.sqlite` — data tetap ada
+- `node_modules/` — dependensi NPM tetap ada
+- `database/database.sqlite` — data SQLite tetap ada
 
 Jika ada **migrasi database baru**, jalankan via SSH:
+
 ```bash
-cd /www/wwwroot/hosting/nama-repo
-/www/server/php/83/bin/php artisan migrate --force
+php artisan migrate --force
 ```
 
 ---
@@ -236,47 +305,66 @@ ss -tlnp | grep :PORT
 
 ### Web tidak bisa diakses (502 Bad Gateway)
 
-Service belum berjalan. Cek dengan:
+Service belum berjalan atau belum di-setup. Cek dengan:
+
 ```bash
 sudo systemctl status autodeploy-nama-repo.service
 ```
-Jika status `failed` atau `waiting-setup`, jalankan setup Laravel dulu (langkah di atas).
+
+Jika status `failed` atau `waiting-setup`, pastikan kamu sudah menjalankan semua langkah setup Laravel di atas.
 
 ### SSH gagal terkoneksi
 
 Pastikan `cloudflared` sudah terinstall:
-```
+
+```bash
 cloudflared --version
 ```
-Jika tidak ditemukan, jalankan ulang `cloudflaredclient.bat`.
+
+Jika tidak ditemukan, ulangi instalasi cloudflared sesuai OS kamu.
 
 ### Permission denied saat edit file
 
-Jalankan:
 ```bash
 sudo fix-perm-nama-repo
 ```
 
-### composer install gagal
 
-Pastikan kamu berada di folder yang benar:
+### `npm install` atau `npm run build` gagal
+
+Cek versi Node.js:
+
 ```bash
-pwd
-# harus: /www/wwwroot/hosting/nama-repo
+node --version
+npm --version
 ```
+
+Jika versi terlalu lama atau tidak tersedia, hubungi dosen terkait
 
 ### Lupa password SSH
 
-Buka GitHub Actions → tab **Actions** → klik deploy terbaru → **Job Summary** — password selalu ditampilkan di sana.
+Buka **GitHub → tab Actions → klik deploy terbaru → Job Summary** — password selalu ditampilkan di sana.
+
+### `.env` tidak ditemukan
+
+File `.env` tidak pernah dikirim ke server (sengaja dikecualikan dari ZIP untuk keamanan). Kamu perlu membuatnya manual via SSH:
+
+```bash
+cp .env.example .env
+nano .env
+```
 
 ---
 
 ## 📞 Bantuan
 
-Jika masih ada masalah, hubungi Dosen terkati atau lihat log lengkap:
-```bash
-cat /var/log/autodeploy/nama-repo.log
-```
+Jika masih ada masalah:
+1. Cek **Job Summary** di GitHub Actions untuk pesan error
+2. Lihat log lengkap via SSH:
+   ```bash
+   cat /var/log/autodeploy/nama-repo.log
+   ```
+3. Hubungi dosen terkait dengan menyertakan output log
 
 ---
 
